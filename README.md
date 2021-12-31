@@ -1,4 +1,4 @@
-# An Advanced Dirichlet Prior Network for Out-of-distribution Detection in Remote Sensing
+# An Advanced Dirichlet Prior Network for Out-of-Distribution Detection in Remote Sensing
 
 ## Out-of-Distribution detection for unseen classes, changing sensors, and changing locations.
 
