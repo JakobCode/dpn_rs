@@ -45,6 +45,8 @@ def build_in_out_generator(gen_in,
                                                              tf.TensorShape([batch_size, *output_shape]))))
 
     # apply transformations on dataset
+    if input_shape[-1] == 1:
+        flow_ds.map(lambda x, y: [tf.concat([x, x, x], -1), y])
     if crop_shape is not None:
         flow_ds = flow_ds.map(lambda x, y: [tf.image.random_crop(x, [batch_size,*crop_shape]), y])
     if resize_shape is not None:

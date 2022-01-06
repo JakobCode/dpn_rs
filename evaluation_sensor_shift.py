@@ -2,9 +2,8 @@ import os
 import argparse
 
 from settings import *
-from DataHandling.DataGenerator import build_in_out_generator
-from DataHandling.DataGenerator_UCM import generator_ucm, get_ucm_class_splits
-from DataHandling.DataGenerator_AID import generator_aid, get_aid_class_splits
+from DataHandling.DataGenerator_UCM import generator_ucm, ucm_classes_whole
+from DataHandling.DataGenerator_AID import generator_aid, aid_classes_whole
 from Models.model_prepare import prepare_model
 
 from Measures.Measures import mutual_information, entropy, max_probability_from_logits, get_scores
@@ -18,47 +17,46 @@ def run_experiment(data_set, approach, exp_save_path, seed):
 
     mu, std = 0, 255
 
-    training_fraction = [0.0, 0.7]
-    validation_fraction = [0.7, 1]
-    test_fraction = [0.7, 1]
+    test_fraction = [0.7, 1.0]
 
-    num_epochs = 100
-    band_filter_train_in = band_filter_train_ood = band_filter_val_in = band_filter_val_ood = None
+    band_filter_in = [0]
+    band_filter_out_test = [2]
 
     if data_set is Dataset.UCM:
-        input_shape = [256, 256, 3]
-        crop_shape = [241, 241, 3]
-        resize_shape = [256, 256, 3]       
+        input_shape = [256, 256, 1]
+        crop_shape = [241, 241, 1]
+        resize_shape = [256, 256, 1]       
         generator = generator_ucm
-        classes_in, classes_out_training, classes_out_testing = get_ucm_class_splits()
+        classes_in = classes_out_testing = list(ucm_classes_whole.keys())
         data_root_path = ucm_root_path
 
     elif data_set is Dataset.AID:
-        input_shape = [600, 600, 3]
-        resize_shape = [256, 256, 3]
-        crop_shape = [500, 500, 3]        
+        input_shape = [600, 600, 1]
+        resize_shape = [256, 256, 1]
+        crop_shape = [500, 500, 1]        
         generator = generator_aid
-        classes_in, classes_out_training, classes_out_testing = get_aid_class_splits()
+        classes_in = classes_out_testing = list(aid_classes_whole.keys())
         data_root_path = aid_root_path
 
     num_classes = len(classes_in)
-    num_classes_out_training = len(classes_out_training)
-    num_classes_out_testing = len(classes_out_testing)
 
-    
+    num_classes = len(classes_in)
+    num_classes_out_testing = len(classes_out_testing)
 
 
     test_in_generator, test_steps_in = generator(root_folder=data_root_path,
                                                      batch_size=batch_size,
                                                      filter_classes=classes_in,
                                                      set_fraction=test_fraction,
-                                                     seed=seed)
+                                                     seed=seed,
+                                                     band_filter=band_filter_in)
 
     test_out_generator, test_steps_out = generator(root_folder=data_root_path,
                                                        batch_size=batch_size,
                                                        filter_classes=classes_out_testing,
                                                        set_fraction=test_fraction,
-                                                       seed=seed)
+                                                       seed=seed,
+                                                       band_filter=band_filter_out_test)
 
     test_steps = min(test_steps_in, test_steps_out)
 
@@ -67,6 +65,7 @@ def run_experiment(data_set, approach, exp_save_path, seed):
                                                 output_shapes=((tf.TensorShape([batch_size, *input_shape]),
                                                                 tf.TensorShape([batch_size, num_classes]))))
 
+    test_ds_in = test_ds_in.map(lambda x, y: [tf.concat([x,x,x],-1), y])
     test_ds_in = test_ds_in.map(lambda x, y: [tf.image.resize_with_crop_or_pad(x, *crop_shape[:2]), y])
     test_ds_in = test_ds_in.map(lambda x, y: [tf.image.resize(x, resize_shape[:2]), y])
     test_ds_in = test_ds_in.map(lambda x, y: [(x-mu)/std, y])
@@ -79,6 +78,8 @@ def run_experiment(data_set, approach, exp_save_path, seed):
                                                  output_shapes=((tf.TensorShape([batch_size, *input_shape]),
                                                                  tf.TensorShape([batch_size, num_classes]))))
 
+
+    test_ds_out = test_ds_out.map(lambda x, y: [tf.concat([x,x,x],-1), y])
     test_ds_out = test_ds_out.map(lambda x, y: [tf.image.resize_with_crop_or_pad(x, *crop_shape[:2]), y])
     test_ds_out = test_ds_out.map(lambda x, y: [tf.image.resize(x, resize_shape[:2]), y])
     test_ds_out = test_ds_out.map(lambda x, y: [(x-mu)/std, y])
@@ -89,7 +90,7 @@ def run_experiment(data_set, approach, exp_save_path, seed):
     model, _ = prepare_model(model_type=model_type,
                              approach=approach,
                              num_classes=num_classes,
-                             input_shape=resize_shape)
+                             input_shape=[resize_shape[0], resize_shape[1], 3])
 
     model.load_weights(os.path.join(exp_save_path, "final_model"))
     model.compile()
@@ -163,13 +164,13 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    assert args.approach in ["dpn_rs", "prior_kl_forward", "prior_kl_reverse", "dpn_plus", "evidential_cross_entropy"], f"approach '{args.approach}' not valid argument!"
+    assert args.approach in ["dpn_rs", "prior_forward", "prior_reverse", "dpn_plus", "evidential_cross_entropy"], f"approach '{args.approach}' not valid argument!"
     
     if args.approach == "dpn_rs":
         approach = Approaches.dpn_rs
-    elif args.approach == "prior_kl_forward":
+    elif args.approach == "prior_forward":
         approach = Approaches.prior_kl_forward
-    elif args.approach == "prior_kl_reverse":
+    elif args.approach == "prior_reverse":
         approach = Approaches.prior_kl_reverse
     elif args.approach == "dpn_plus":
         approach = Approaches.dpn_plus

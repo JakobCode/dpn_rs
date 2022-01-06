@@ -1,16 +1,21 @@
 import os
 import argparse
 
-from Experiments.settings import *
+from settings import *
 from DataHandling.DataGenerator import build_in_out_generator
 from DataHandling.DataGenerator_UCM import generator_ucm, get_ucm_class_splits
 from DataHandling.DataGenerator_AID import generator_aid, get_aid_class_splits
 from Models.model_prepare import prepare_model
 
-def run_experiment(data_set, approach, sava_path, seed):
+import random
+import tensorflow as tf
+import numpy as np
 
-    # SETTINGS
-    exp_save_path = "./"
+def run_experiment(data_set, approach,  exp_save_path, seed):
+
+    random.seed(seed)
+    tf.random.set_seed(seed)
+    np.random.seed(seed)
 
     batch_size = 32
     model_type = Models.ResNet50
@@ -20,11 +25,11 @@ def run_experiment(data_set, approach, sava_path, seed):
     training_fraction = [0.0, 0.7]
     validation_fraction = [0.7, 1.0]
 
-    num_epochs = 100
+    num_epochs = 25
     band_filter_train_in = band_filter_train_ood = band_filter_val_in = band_filter_val_ood = None
 
     if data_set is Dataset.UCM:
-        data_root_path = "./datasets/ucm"
+        data_root_path = ucm_root_path
         input_shape = [256, 256, 3]
         crop_shape = [241, 241, 3]
         resize_shape = [256, 256, 3]       
@@ -32,7 +37,7 @@ def run_experiment(data_set, approach, sava_path, seed):
         classes_in, classes_out_training, _ = get_ucm_class_splits()
 
     elif data_set is Dataset.AID:
-        data_root_path = "./datasets/aid"
+        data_root_path = aid_root_path
         input_shape = [600, 600, 3]
         resize_shape = [256, 256, 3]
         crop_shape = [500, 500, 3]        
@@ -126,8 +131,7 @@ def run_experiment(data_set, approach, sava_path, seed):
     model, callbacks = prepare_model(model_type=model_type,
                                     approach=approach,
                                     num_classes=num_classes,
-                                    input_shape=input_shape,
-                                    save_path=exp_save_path)
+                                    input_shape=resize_shape)
     model.summary()
 
     # Start training process
@@ -154,13 +158,13 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    assert args.approach in ["dpn_rs", "prior_forward", "prior_reverse", "dpn_plus", "evidential_cross_entropy"], f"approach '{args.approach}' not valid argument!"
+    assert args.approach in ["dpn_rs", "prior_kl_forward", "prior_kl_reverse", "dpn_plus", "evidential_cross_entropy"], f"approach '{args.approach}' not valid argument!"
     
     if args.approach == "dpn_rs":
         approach = Approaches.dpn_rs
-    elif args.approach == "prior_forward":
+    elif args.approach == "prior_kl_forward":
         approach = Approaches.prior_kl_forward
-    elif args.approach == "prior_reverse":
+    elif args.approach == "prior_kl_reverse":
         approach = Approaches.prior_kl_reverse
     elif args.approach == "dpn_plus":
         approach = Approaches.dpn_plus
@@ -176,4 +180,4 @@ if __name__=="__main__":
     save_path = args.path
     seed = args.seed
 
-    run_experiment(data_set=data_set, approach=approach, sava_path=save_path, seed=seed)
+    run_experiment(data_set=data_set, approach=approach, exp_save_path=save_path, seed=seed)

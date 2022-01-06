@@ -33,23 +33,19 @@ aid_classes_whole = {"Airport": 0,
                      "StorageTanks": 28,
                      "Viaduct": 29}
 
-
-def get_aid_class_splits(class_split):
-    s = class_split.split("_")
-    n = int(s[1])
-
-    if s[0] == "det":
-        return _aid_class_splits[n]
-    elif s[0] == "rand":
-        np.random.seed(n)
+def get_aid_class_splits(rand=False, seed=42):
+    
+    if not rand:
+        return _aid_class_splits[0]
+    else:
+        np.random.seed(seed)
         num_classes = len(aid_classes_whole)
         id_list = np.arange(num_classes)
         np.random.shuffle(id_list)
 
         return [np.array(list(aid_classes_whole))[id_list[:(num_classes // 3)]],
-                np.array(list(aid_classes_whole))[id_list[(num_classes // 3):-(num_classes // 3)]],
-                np.array(list(aid_classes_whole))[id_list[-(num_classes // 3):]]]
-
+               np.array(list(aid_classes_whole))[id_list[(num_classes // 3):-(num_classes // 3)]],
+               np.array(list(aid_classes_whole))[id_list[-(num_classes // 3):]]]
 
 _aid_class_splits = [[["Farmland",
                       "BareLand",
