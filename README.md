@@ -17,7 +17,7 @@ If you find this code useful, please consider citing:
 ```[bibtex]
 @article{gawlikowski2022Andvanced,
   title={An Advanced Dirichlet Prior Network for Out-of-distribution Detection in Remote Sensing},
-  author={Gawlikoski, Jakob and Saha, Sudipan and Kruspe, Anna and Zhu, Xiao Xiang},
+  author={Gawlikowski, Jakob and Saha, Sudipan and Kruspe, Anna and Zhu, Xiao Xiang},
   journal={IEEE Transactions in Geoscience and Remote Sensing}
   year={2022},
   publisher={IEEE}
